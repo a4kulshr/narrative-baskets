@@ -100,6 +100,9 @@ Rules:
   German-speaking" for an anti-Germany rant). Declining those is a GOOD outcome: return fit < 50, short/empty
   legs, explain in fitReason.
 - If the domain has real coverage, BUILD THE BASKET. Do not decline for imperfect coverage.
+- Match time horizons: a thesis about a long-run trend should prefer the LONGEST-dated markets available and
+  down-weight near-term binaries (a 6-week market is a stronger claim than "this direction continues").
+  State the basket's effective horizon in the summary, e.g. "expressed over a Jul-Dec 2026 horizon".
 
 Call ${TOOL_NAME} with the basket.`;
 }
