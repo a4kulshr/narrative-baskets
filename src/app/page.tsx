@@ -195,7 +195,9 @@ export default function Home() {
                                   `${r.ticker}: ${r.ok ? `filled ${r.fill_count ?? "0"}` : "FAILED"}`
                               )
                               .join(" · ")
-                        : `error: ${data.error}`
+                        : data.error === "kalshi trading not configured"
+                          ? "execution adapter built (Kalshi V2 orders, RSA-signed) — add venue keys to go live"
+                          : `error: ${data.error}`
                     );
                   } catch (e) {
                     setTradeResult(e instanceof Error ? e.message : "trade failed");
