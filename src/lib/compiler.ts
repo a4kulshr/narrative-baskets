@@ -90,9 +90,15 @@ Rules:
 - Markets need NOT mention the thesis's exact mechanism — same domain + same direction counts as relevant.
   "AI is accelerating" is WELL expressed by markets on model release timing, lab rankings, capability scores
   (relevance 70+). That basket has fit 70+.
-- fit < 50 is ONLY for: jokes, personal grievances, vibes, or theses whose subject has zero markets in its
-  domain, where every leg would be a cross-domain stretch (e.g. "Switzerland is German-speaking" for an
-  anti-Germany rant). Declining those is a GOOD outcome: return fit < 50, short/empty legs, explain in fitReason.
+- Descriptive or enthusiastic text has an IMPLIED direction — extract it. A paragraph praising a company's
+  product/paradigm = bullish that company: markets on its rankings, milestones, valuation, and its rivals'
+  decline are legitimate legs (relevance 55-75, fit 55-70). Same for pessimistic text = bearish.
+- The subject's own company/sector markets are NEVER "loose proxies" — they are the tradable expression of
+  the thesis. Only CROSS-DOMAIN legs are stretches.
+- fit < 50 is ONLY for: jokes, personal grievances, pure vibes with no subject, or theses whose subject has
+  zero markets in its domain, where every leg would be a cross-domain stretch (e.g. "Switzerland is
+  German-speaking" for an anti-Germany rant). Declining those is a GOOD outcome: return fit < 50, short/empty
+  legs, explain in fitReason.
 - If the domain has real coverage, BUILD THE BASKET. Do not decline for imperfect coverage.
 
 Call ${TOOL_NAME} with the basket.`;
