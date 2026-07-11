@@ -67,7 +67,7 @@ const Out = z.object({
 
 export class NoFitError extends Error {}
 
-function prompt(thesis: string, catalog: CatalogMarket[]): string {
+function prompt(thesis: string, catalog: CatalogMarket[], stance?: string): string {
   const list = catalog
     .map((m) => `${m.ticker} | ${m.title} | yes=${m.yesPrice.toFixed(2)} | vol=${m.volume}`)
     .join("\n");
@@ -77,6 +77,7 @@ THESIS (may be a rant, tweet, transcript — extract the core belief):
 """
 ${thesis.slice(0, 6000)}
 """
+${stance ? `\nSCOUT ANALYSIS (pre-computed read of the thesis — markets below were pre-filtered for it):\n${stance}\n` : ""}
 
 LIVE PREDICTION MARKETS (Polymarket) (ticker | title | yes price | volume):
 ${list}
@@ -109,7 +110,7 @@ Rules:
 Call ${TOOL_NAME} with the basket.`;
 }
 
-export async function compileBasket(thesis: string, catalog: CatalogMarket[]): Promise<Basket> {
+export async function compileBasket(thesis: string, catalog: CatalogMarket[], stance?: string): Promise<Basket> {
   const client = new Anthropic();
   const byTicker = new Map(catalog.map((m) => [m.ticker, m]));
 
@@ -124,7 +125,7 @@ export async function compileBasket(thesis: string, catalog: CatalogMarket[]): P
       messages: [
         {
           role: "user",
-          content: prompt(thesis, catalog) + (lastErr ? `\n\nPrevious attempt was invalid (${lastErr}) — fix it.` : ""),
+          content: prompt(thesis, catalog, stance) + (lastErr ? `\n\nPrevious attempt was invalid (${lastErr}) — fix it.` : ""),
         },
       ],
     });

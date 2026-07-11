@@ -20,20 +20,28 @@ const CACHE_MS = 10 * 60 * 1000;
 async function fetchAll(): Promise<CatalogMarket[]> {
   if (cache && Date.now() - cache.at < CACHE_MS) return cache.markets;
 
-  const offsets = [0, 500, 1000, 1500, 2000, 2500, 3000, 3500];
-  const pages = await Promise.all(
-    offsets.map(async (offset) => {
+  // Gamma silently caps limit at 100 and 422s past offset ~2400 — page honestly,
+  // in chunks of 8 to dodge rate limits, with one retry per failed page.
+  const fetchPage = async (offset: number): Promise<GammaMarket[]> => {
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const res = await fetch(
-          `${GAMMA}?order=volume24hr&ascending=false&closed=false&limit=500&offset=${offset}`,
+          `${GAMMA}?order=volume24hr&ascending=false&closed=false&limit=100&offset=${offset}`,
           { cache: "no-store" }
         );
-        return res.ok ? ((await res.json()) as GammaMarket[]) : [];
+        if (res.ok) return (await res.json()) as GammaMarket[];
       } catch {
-        return [];
+        /* retry once */
       }
-    })
-  );
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    return [];
+  };
+  const offsets = Array.from({ length: 25 }, (_, i) => i * 100);
+  const pages: GammaMarket[][] = [];
+  for (let i = 0; i < offsets.length; i += 8) {
+    pages.push(...(await Promise.all(offsets.slice(i, i + 8).map(fetchPage))));
+  }
 
   const out: CatalogMarket[] = [];
   for (const m of pages.flat()) {
@@ -58,16 +66,32 @@ async function fetchAll(): Promise<CatalogMarket[]> {
   return out;
 }
 
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // Top-volume markets alone miss niche narratives (AI, science, tech) — the 24h
-// leaderboard is all sports/geopolitics/crypto. So: liquid core + thesis-keyword hits.
-export async function getCatalog(thesis = ""): Promise<CatalogMarket[]> {
+// leaderboard is all sports/geopolitics/crypto. So: liquid core + relevance hits.
+// With scout terms: score by term hits (best-first). Without: legacy keyword path.
+export async function getCatalog(thesis = "", scoutTerms?: string[]): Promise<CatalogMarket[]> {
   // VENUE=kalshi → tradable Kalshi catalog; default Polymarket (read-only, richer titles).
   const all =
     process.env.VENUE === "kalshi"
       ? await (await import("./catalog-kalshi")).getKalshiCatalog()
       : await fetchAll();
-  const core = all.slice(0, 300);
 
+  if (scoutTerms?.length) {
+    const rx = scoutTerms.map((t) => new RegExp(`\\b${esc(t)}`, t.length <= 3 ? "" : "i"));
+    const scored = all
+      .map((m) => ({ m, hits: rx.reduce((n, r) => n + (r.test(m.title) ? 1 : 0), 0) }))
+      .filter((x) => x.hits > 0)
+      .sort((a, b) => b.hits - a.hits || b.m.volume - a.m.volume)
+      .slice(0, 250)
+      .map((x) => x.m);
+    const matchedSet = new Set(scored.map((m) => m.ticker));
+    const core = all.filter((m) => !matchedSet.has(m.ticker)).slice(0, 150);
+    return [...scored, ...core];
+  }
+
+  const core = all.slice(0, 300);
   const words = Array.from(
     new Set(
       thesis
@@ -75,7 +99,7 @@ export async function getCatalog(thesis = ""): Promise<CatalogMarket[]> {
         .filter((w) => (w.length >= 4 && !STOP.has(w.toLowerCase())) || /^[A-Z]{2,3}$/.test(w))
     )
   );
-  const rx = words.map((w) => new RegExp(`\\b${w}`, w.length <= 3 ? "" : "i"));
+  const rx = words.map((w) => new RegExp(`\\b${esc(w)}`, w.length <= 3 ? "" : "i"));
   const coreSet = new Set(core.map((m) => m.ticker));
   const matched = all
     .filter((m) => !coreSet.has(m.ticker) && rx.some((r) => r.test(m.title)))
