@@ -151,11 +151,21 @@ export default function Home() {
               </div>
             </div>
 
-            {horizonOf(basket) && (
-              <p className="mt-3 inline-block rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400">
-                Horizon: {horizonOf(basket)} · markets are dated instruments; the narrative rolls
-              </p>
-            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {horizonOf(basket) && (
+                <p className="inline-block rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400">
+                  Horizon: {horizonOf(basket)} · markets are dated instruments; the narrative rolls
+                </p>
+              )}
+              {basket.fit < 60 && (
+                <p
+                  className="inline-block rounded-full border border-amber-500/40 px-3 py-1 text-xs text-amber-400"
+                  title={basket.fitReason}
+                >
+                  loose fit — closest tradable expression, not a direct market
+                </p>
+              )}
+            </div>
 
             <table className="mt-6 w-full text-sm">
               <thead>

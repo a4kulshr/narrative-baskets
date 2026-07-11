@@ -22,6 +22,8 @@ export interface Basket {
   thesis: string;
   legs: Leg[];
   indexValue: number; // Σ weight × side-adjusted price, 0–1
+  fit: number; // 0-100 self-scored: how genuinely the legs express the thesis
+  fitReason: string;
 }
 
 export const legPrice = (l: Leg) => (l.side === "yes" ? l.yesPrice : 1 - l.yesPrice);

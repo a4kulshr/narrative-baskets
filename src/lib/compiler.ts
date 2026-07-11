@@ -93,6 +93,8 @@ Rules:
 - Descriptive or enthusiastic text has an IMPLIED direction — extract it. A paragraph praising a company's
   product/paradigm = bullish that company: markets on its rankings, milestones, valuation, and its rivals'
   decline are legitimate legs (relevance 55-75, fit 55-70). Same for pessimistic text = bearish.
+- Second-order theses count too: "AI is net job-creating" is expressed by AI capability/release markets
+  (the driver) + NO on recession (the absence of harm) — that is fit 55-65 with a caveat, NOT a decline.
 - The subject's own company/sector markets are NEVER "loose proxies" — they are the tradable expression of
   the thesis. Only CROSS-DOMAIN legs are stretches.
 - fit < 50 is ONLY for: jokes, personal grievances, pure vibes with no subject, or theses whose subject has
@@ -116,6 +118,7 @@ export async function compileBasket(thesis: string, catalog: CatalogMarket[]): P
     const res = await client.messages.create({
       model: COMPILE_MODEL,
       max_tokens: 2000,
+      temperature: 0, // determinism — same thesis must compile the same way on stage
       tools: [TOOL],
       tool_choice: { type: "tool", name: TOOL_NAME },
       messages: [
@@ -133,11 +136,12 @@ export async function compileBasket(thesis: string, catalog: CatalogMarket[]): P
       continue;
     }
 
-    // The no-fit gate: below-threshold fit or too few genuinely relevant legs → decline.
-    if (parsed.data.fit < 50) {
+    // Three tiers: <40 decline, 40-59 build with a loose-fit caveat, >=60 clean.
+    // Refusal is for garbage only — borderline theses get a labeled basket, not a no.
+    if (parsed.data.fit < 40) {
       throw new NoFitError(parsed.data.fitReason || "no live markets genuinely express this thesis");
     }
-    const legs = parsed.data.legs.filter((l) => byTicker.has(l.ticker) && l.relevance >= 45);
+    const legs = parsed.data.legs.filter((l) => byTicker.has(l.ticker) && l.relevance >= 40);
     if (legs.length < 3) {
       if (parsed.data.legs.length >= 3) {
         throw new NoFitError(parsed.data.fitReason || "only tangential proxy markets found for this thesis");
@@ -168,6 +172,8 @@ export async function compileBasket(thesis: string, catalog: CatalogMarket[]): P
       thesis,
       legs: full,
       indexValue: indexValue(full),
+      fit: parsed.data.fit,
+      fitReason: parsed.data.fitReason,
     };
   }
   throw new Error(`compile failed: ${lastErr || "no valid tool output"}`);
