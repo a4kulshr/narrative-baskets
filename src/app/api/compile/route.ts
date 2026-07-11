@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCatalog } from "@/lib/catalog";
-import { compileBasket } from "@/lib/compiler";
+import { compileBasket, NoFitError } from "@/lib/compiler";
 
 export const maxDuration = 60;
 
@@ -24,6 +24,9 @@ export async function POST(req: NextRequest) {
     const basket = await compileBasket(thesis, catalog);
     return NextResponse.json({ basket });
   } catch (e) {
+    if (e instanceof NoFitError) {
+      return NextResponse.json({ noFit: e.message });
+    }
     return NextResponse.json({ error: e instanceof Error ? e.message : "compile failed" }, { status: 500 });
   }
 }

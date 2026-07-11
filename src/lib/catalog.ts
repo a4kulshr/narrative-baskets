@@ -43,7 +43,8 @@ async function fetchAll(): Promise<CatalogMarket[]> {
     } catch {
       continue;
     }
-    if (yes == null || !Number.isFinite(yes) || yes <= 0 || yes >= 1) continue;
+    // 5–95¢ only: near-resolved markets are dead weight in a basket.
+    if (yes == null || !Number.isFinite(yes) || yes < 0.05 || yes > 0.95) continue;
     out.push({
       ticker: m.slug,
       title: m.question,

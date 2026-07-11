@@ -24,6 +24,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [loadLine, setLoadLine] = useState(0);
   const [error, setError] = useState("");
+  const [noFit, setNoFit] = useState("");
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function Home() {
     if (loading || thesis.trim().length < 10) return;
     setLoading(true);
     setError("");
+    setNoFit("");
     setBasket(null);
     setLoadLine(0);
     try {
@@ -50,6 +52,10 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "compile failed");
+      if (data.noFit) {
+        setNoFit(data.noFit);
+        return;
+      }
       setBasket(data.basket);
     } catch (e) {
       setError(e instanceof Error ? e.message : "compile failed");
@@ -101,6 +107,17 @@ export default function Home() {
           <p className="mt-6 animate-pulse text-sm text-emerald-400">{LOADING_LINES[loadLine]}</p>
         )}
         {error && <p className="mt-6 text-sm text-red-400">{error}</p>}
+
+        {noFit && (
+          <div className="mt-12 rounded-2xl border border-amber-500/30 bg-zinc-900 p-6">
+            <p className="text-sm font-semibold text-amber-400">No clean basket for this one.</p>
+            <p className="mt-2 text-sm text-zinc-400">{noFit}</p>
+            <p className="mt-3 text-xs text-zinc-500">
+              We only build baskets from markets that genuinely express the thesis — no stretched proxies.
+              Try a take on politics, AI, crypto, macro, or geopolitics.
+            </p>
+          </div>
+        )}
 
         {basket && (
           <div ref={resultRef} className="mt-12 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">

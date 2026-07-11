@@ -14,9 +14,16 @@ const TOOL = {
     properties: {
       name: { type: "string", description: "Short index-style name, e.g. 'AI Doom Index'" },
       summary: { type: "string", description: "One sentence: what this basket expresses" },
+      fit: {
+        type: "integer",
+        minimum: 0,
+        maximum: 100,
+        description: "How genuinely the chosen markets express the thesis. <50 = forced proxies, no real coverage.",
+      },
+      fitReason: { type: "string", description: "One honest sentence explaining the fit score" },
       legs: {
         type: "array",
-        minItems: 4,
+        minItems: 0,
         maxItems: 10,
         items: {
           type: "object",
@@ -24,31 +31,41 @@ const TOOL = {
             ticker: { type: "string" },
             side: { type: "string", enum: ["yes", "no"] },
             weight: { type: "integer", minimum: 5, maximum: 50 },
+            relevance: {
+              type: "integer",
+              minimum: 0,
+              maximum: 100,
+              description: "How directly this market expresses the thesis. <45 = tangential stretch.",
+            },
             rationale: { type: "string", description: "Max 12 words: why this market expresses the thesis" },
           },
-          required: ["ticker", "side", "weight", "rationale"],
+          required: ["ticker", "side", "weight", "relevance", "rationale"],
         },
       },
     },
-    required: ["name", "summary", "legs"],
+    required: ["name", "summary", "fit", "fitReason", "legs"],
   },
 };
 
 const Out = z.object({
   name: z.string().min(1),
   summary: z.string().min(1),
+  fit: z.number(),
+  fitReason: z.string(),
   legs: z
     .array(
       z.object({
         ticker: z.string(),
         side: z.enum(["yes", "no"]),
         weight: z.number(),
+        relevance: z.number(),
         rationale: z.string(),
       })
     )
-    .min(4)
     .max(10),
 });
+
+export class NoFitError extends Error {}
 
 function prompt(thesis: string, catalog: CatalogMarket[]): string {
   const list = catalog
@@ -65,11 +82,18 @@ LIVE PREDICTION MARKETS (Polymarket) (ticker | title | yes price | volume):
 ${list}
 
 Rules:
-- Pick 4-10 markets that genuinely express the thesis. Only tickers from the list.
+- Pick 3-10 markets that genuinely express the thesis. Only tickers from the list.
 - side: "yes" if the thesis implies the event happens, "no" if it implies it won't.
 - weight: how central the market is to the thesis (integers, aim to sum to 100).
 - Prefer higher-volume markets. Avoid sports unless the thesis is about sports.
-- If the thesis is too vague or no markets fit, still pick the closest 4 and say so in rationales.
+- Score each leg's relevance HONESTLY: 100 = directly expresses the thesis, <45 = tangential stretch.
+- Markets need NOT mention the thesis's exact mechanism — same domain + same direction counts as relevant.
+  "AI is accelerating" is WELL expressed by markets on model release timing, lab rankings, capability scores
+  (relevance 70+). That basket has fit 70+.
+- fit < 50 is ONLY for: jokes, personal grievances, vibes, or theses whose subject has zero markets in its
+  domain, where every leg would be a cross-domain stretch (e.g. "Switzerland is German-speaking" for an
+  anti-Germany rant). Declining those is a GOOD outcome: return fit < 50, short/empty legs, explain in fitReason.
+- If the domain has real coverage, BUILD THE BASKET. Do not decline for imperfect coverage.
 
 Call ${TOOL_NAME} with the basket.`;
 }
@@ -100,8 +124,15 @@ export async function compileBasket(thesis: string, catalog: CatalogMarket[]): P
       continue;
     }
 
-    const legs = parsed.data.legs.filter((l) => byTicker.has(l.ticker));
+    // The no-fit gate: below-threshold fit or too few genuinely relevant legs → decline.
+    if (parsed.data.fit < 50) {
+      throw new NoFitError(parsed.data.fitReason || "no live markets genuinely express this thesis");
+    }
+    const legs = parsed.data.legs.filter((l) => byTicker.has(l.ticker) && l.relevance >= 45);
     if (legs.length < 3) {
+      if (parsed.data.legs.length >= 3) {
+        throw new NoFitError(parsed.data.fitReason || "only tangential proxy markets found for this thesis");
+      }
       lastErr = "fewer than 3 legs matched real tickers — use tickers from the list verbatim";
       continue;
     }
