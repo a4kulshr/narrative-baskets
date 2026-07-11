@@ -3,6 +3,7 @@ export interface CatalogMarket {
   title: string;
   yesPrice: number; // 0–1 mid
   volume: number;
+  endDate?: string; // ISO resolution date
 }
 
 export interface Leg {
@@ -12,6 +13,7 @@ export interface Leg {
   weight: number; // integer, legs sum to 100
   rationale: string;
   yesPrice: number;
+  endDate?: string;
 }
 
 export interface Basket {

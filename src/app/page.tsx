@@ -4,6 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import type { Basket } from "@/lib/types";
 import { legPrice } from "@/lib/types";
 
+const fmtDate = (iso?: string) =>
+  iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
+
+function horizonOf(basket: Basket): string | null {
+  const ds = basket.legs.map((l) => l.endDate).filter(Boolean).map((d) => new Date(d!));
+  if (!ds.length) return null;
+  const min = new Date(Math.min(...ds.map(Number)));
+  const max = new Date(Math.max(...ds.map(Number)));
+  const f = (d: Date) => d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return f(min) === f(max) ? f(min) : `${f(min)} – ${f(max)}`;
+}
+
 const EXAMPLES = [
   { label: "AI is accelerating", text: "AI progress is speeding up. Frontier labs will ship faster than anyone expects, regulation won't keep pace, and capability milestones keep falling early." },
   { label: "Fed panic incoming", text: "The economy is weaker than the data shows. The Fed will be forced into emergency cuts, inflation re-accelerates, and markets are underpricing a hard landing." },
@@ -133,8 +145,17 @@ export default function Home() {
                 <p className="text-4xl font-bold text-emerald-400">
                   {(basket.indexValue * 100).toFixed(0)}
                 </p>
+                <p className="mt-1 text-[10px] text-zinc-500">
+                  market&apos;s current belief in this narrative
+                </p>
               </div>
             </div>
+
+            {horizonOf(basket) && (
+              <p className="mt-3 inline-block rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400">
+                Horizon: {horizonOf(basket)} · markets are dated instruments; the narrative rolls
+              </p>
+            )}
 
             <table className="mt-6 w-full text-sm">
               <thead>
@@ -149,7 +170,14 @@ export default function Home() {
                 {basket.legs.map((l) => (
                   <tr key={l.ticker} className="border-b border-zinc-800/50 align-top">
                     <td className="py-3 pr-4">
-                      <p className="font-medium">{l.title}</p>
+                      <p className="font-medium">
+                        {l.title}
+                        {fmtDate(l.endDate) && (
+                          <span className="ml-2 rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-500">
+                            {fmtDate(l.endDate)}
+                          </span>
+                        )}
+                      </p>
                       <p className="mt-0.5 text-xs text-zinc-500">{l.rationale}</p>
                     </td>
                     <td className="py-3">
@@ -163,7 +191,15 @@ export default function Home() {
                         {l.side.toUpperCase()}
                       </span>
                     </td>
-                    <td className="py-3 text-right tabular-nums">{l.weight}%</td>
+                    <td className="py-3 text-right">
+                      <span className="tabular-nums">{l.weight}%</span>
+                      <div className="mt-1 ml-auto h-1 w-16 rounded bg-zinc-800">
+                        <div
+                          className="h-1 rounded bg-emerald-500/70"
+                          style={{ width: `${Math.min(100, l.weight * 2)}%` }}
+                        />
+                      </div>
+                    </td>
                     <td className="py-3 text-right tabular-nums">{(legPrice(l) * 100).toFixed(0)}¢</td>
                   </tr>
                 ))}

@@ -11,6 +11,7 @@ interface GammaMarket {
   volume24hr?: number | string | null;
   active?: boolean;
   closed?: boolean;
+  endDate?: string;
 }
 
 let cache: { at: number; markets: CatalogMarket[] } | null = null;
@@ -50,6 +51,7 @@ async function fetchAll(): Promise<CatalogMarket[]> {
       title: m.question,
       yesPrice: yes,
       volume: Math.round(Number(m.volume24hr ?? 0)),
+      endDate: m.endDate,
     });
   }
   cache = { at: Date.now(), markets: out };

@@ -157,8 +157,10 @@ export async function compileBasket(thesis: string, catalog: CatalogMarket[]): P
         weight: Math.round((l.weight / total) * 100),
         rationale: l.rationale,
         yesPrice: m.yesPrice,
+        endDate: m.endDate,
       };
     });
+    full.sort((a, b) => b.weight - a.weight);
 
     return {
       name: parsed.data.name,
