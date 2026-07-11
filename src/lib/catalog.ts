@@ -59,7 +59,11 @@ async function fetchAll(): Promise<CatalogMarket[]> {
 // Top-volume markets alone miss niche narratives (AI, science, tech) — the 24h
 // leaderboard is all sports/geopolitics/crypto. So: liquid core + thesis-keyword hits.
 export async function getCatalog(thesis = ""): Promise<CatalogMarket[]> {
-  const all = await fetchAll();
+  // VENUE=kalshi → tradable Kalshi catalog; default Polymarket (read-only, richer titles).
+  const all =
+    process.env.VENUE === "kalshi"
+      ? await (await import("./catalog-kalshi")).getKalshiCatalog()
+      : await fetchAll();
   const core = all.slice(0, 300);
 
   const words = Array.from(

@@ -25,6 +25,8 @@ export default function Home() {
   const [loadLine, setLoadLine] = useState(0);
   const [error, setError] = useState("");
   const [noFit, setNoFit] = useState("");
+  const [trading, setTrading] = useState(false);
+  const [tradeResult, setTradeResult] = useState<string>("");
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -172,14 +174,43 @@ export default function Home() {
               <p className="text-xs text-zinc-500">
                 {basket.legs.length} live Polymarket markets · weights sum to 100
               </p>
-              <a
-                href="https://akalan-app.vercel.app"
-                target="_blank"
-                className="rounded-xl border border-emerald-500 px-5 py-2 text-sm font-semibold text-emerald-400 hover:bg-emerald-500 hover:text-zinc-950"
+              <button
+                disabled={trading}
+                onClick={async () => {
+                  setTrading(true);
+                  setTradeResult("");
+                  try {
+                    const res = await fetch("/api/trade", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ legs: basket.legs, budgetDollars: 10 }),
+                    });
+                    const data = await res.json();
+                    setTradeResult(
+                      res.ok
+                        ? `[${data.env}] balance $${data.balance_dollars} · ` +
+                            data.results
+                              .map(
+                                (r: { ticker: string; ok: boolean; fill_count: string | null }) =>
+                                  `${r.ticker}: ${r.ok ? `filled ${r.fill_count ?? "0"}` : "FAILED"}`
+                              )
+                              .join(" · ")
+                        : `error: ${data.error}`
+                    );
+                  } catch (e) {
+                    setTradeResult(e instanceof Error ? e.message : "trade failed");
+                  } finally {
+                    setTrading(false);
+                  }
+                }}
+                className="rounded-xl border border-emerald-500 px-5 py-2 text-sm font-semibold text-emerald-400 hover:bg-emerald-500 hover:text-zinc-950 disabled:opacity-40"
               >
-                Deploy as an agent on Akalan →
-              </a>
+                {trading ? "entering positions…" : "Enter positions on Kalshi ($10) →"}
+              </button>
             </div>
+            {tradeResult && (
+              <p className="mt-3 break-all font-mono text-xs text-zinc-400">{tradeResult}</p>
+            )}
           </div>
         )}
 
