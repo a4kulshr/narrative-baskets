@@ -38,8 +38,12 @@ export async function POST(req: NextRequest) {
   for (const leg of legs) {
     const legBudget = (budget * leg.weight) / 100;
     const price = leg.side === "yes" ? leg.yesPrice : 1 - leg.yesPrice;
-    // 5c of slippage headroom; IOC so nothing rests.
-    const limit = leg.side === "yes" ? Math.min(0.99, price + 0.05) : Math.max(0.01, leg.yesPrice - 0.05);
+    // 5c of slippage headroom; IOC so nothing rests. Kalshi's grid is whole
+    // cents — mids land on half-cents, so snap toward the aggressive side.
+    const limit =
+      leg.side === "yes"
+        ? Math.min(0.99, Math.ceil((price + 0.05) * 100) / 100)
+        : Math.max(0.01, Math.floor((leg.yesPrice - 0.05) * 100) / 100);
     const count = Math.max(0.01, Math.floor((legBudget / price) * 100) / 100);
     const order = {
       ticker: leg.ticker,

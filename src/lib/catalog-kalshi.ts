@@ -30,21 +30,35 @@ export async function getKalshiCatalog(): Promise<CatalogMarket[]> {
   if (!sRes.ok) return [];
   const sData: { series?: KalshiSeries[] } = await sRes.json();
 
+  // Prod: exclude sports (narrative quality). Demo env: sports IS the liquidity.
+  const excludeSports = process.env.KALSHI_ENV === "prod";
   const topSeries = (sData.series ?? [])
-    .filter((s) => s.ticker && s.category !== "Sports")
+    .filter((s) => s.ticker && (!excludeSports || s.category !== "Sports"))
     .sort((a, b) => Number(b.volume_fp ?? b.volume ?? 0) - Number(a.volume_fp ?? a.volume ?? 0))
     .slice(0, 60)
     .map((s) => s.ticker!);
 
-  const perSeries = await Promise.all(
-    topSeries.map(async (ticker) => {
+  // Chunked + retried: 60 parallel hits get rate-limited and silently drop series.
+  const fetchSeries = async (ticker: string): Promise<{ markets?: KalshiMarket[] }> => {
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const res = await fetch(
           `${KALSHI_BASE}/markets?series_ticker=${encodeURIComponent(ticker)}&status=open&limit=100`,
           { cache: "no-store" }
         );
-        if (!res.ok) return [];
-        const data: { markets?: KalshiMarket[] } = await res.json();
+        if (res.ok) return await res.json();
+      } catch {
+        /* retry once */
+      }
+      await new Promise((r) => setTimeout(r, 350));
+    }
+    return {};
+  };
+  const perSeries: CatalogMarket[][] = [];
+  for (let i = 0; i < topSeries.length; i += 8) {
+    const chunk = await Promise.all(
+      topSeries.slice(i, i + 8).map(async (ticker) => {
+        const data = await fetchSeries(ticker);
         const legs: CatalogMarket[] = [];
         for (const m of data.markets ?? []) {
           if (!m.ticker || !m.title) continue;
@@ -62,11 +76,10 @@ export async function getKalshiCatalog(): Promise<CatalogMarket[]> {
         }
         // Cap per series so hourly BTC ladders don't crowd the catalog.
         return legs.sort((a, b) => b.volume - a.volume).slice(0, 8);
-      } catch {
-        return [];
-      }
-    })
-  );
+      })
+    );
+    perSeries.push(...chunk);
+  }
 
   const markets = perSeries
     .flat()
