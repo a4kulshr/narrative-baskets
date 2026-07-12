@@ -1,4 +1,4 @@
-# Narrative Baskets
+# PredBasket
 
 **Trade the story, not ten markets.**
 

@@ -81,7 +81,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-3xl px-6 py-16">
-        <p className="text-sm tracking-widest text-emerald-400 uppercase">narrative baskets</p>
+        <p className="text-sm tracking-widest text-emerald-400 uppercase">PredBasket</p>
         <h1 className="mt-2 text-4xl font-bold tracking-tight">
           Trade the story,<br />not ten markets.
         </h1>

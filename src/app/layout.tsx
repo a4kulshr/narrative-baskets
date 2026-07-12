@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Narrative Baskets — trade the story, not ten markets",
+  title: "PredBasket — trade the story, not ten markets",
   description:
     "Paste a thesis, a tweet, or a rant. We compile it into a weighted basket of real, live prediction markets with a single index value.",
 };
